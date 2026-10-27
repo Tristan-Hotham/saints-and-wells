@@ -1,0 +1,501 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Whose Church Is It?</title>
+<meta name="description" content="Which saint is each church in Western Europe dedicated to? {{n_churches|int}} church buildings in twelve countries, sorted by patron from Wikidata, plus Ireland's holy wells.">
+<meta property="og:title" content="Whose Church Is It? The map of saints across Western Europe">
+<meta property="og:description" content="Martin in France, the Celtic saints of the Atlantic west, Nicholas by the North Sea, James near Santiago: {{n_churches|int}} churches sorted by their patron saint.">
+<meta property="og:image" content="https://tristan-hotham.github.io/saints-and-wells/header.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,800;0,9..144,900;1,9..144,600&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+/* Illuminated manuscript: vellum and ink by day, lapis and gold leaf by night. Rubric red for emphasis. */
+:root{
+  --bg:#F5EEDC; --panel:#EDE3CB; --fg:#24190F; --muted:#6E5F4A; --rule:#DCCFB1; --card:#FBF6EA; --border:#CBB993;
+  --gold:#A87A12; --leaf:#C9A227; --red:#B3261E; --lapis:#1F3A8A; --green:#2F7D4F;
+  --mary:#23378F; --christ:#8C6D1F; --other:#CDBF9F; --empty:#E6DCC3; --sea:#E3E6E0;
+  --display:"Fraunces",Georgia,"Times New Roman",serif;
+  --body:"Source Serif 4",Georgia,"Times New Roman",serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0E1736; --panel:#152049; --fg:#F1E7CC; --muted:#B4A985; --rule:#26315C; --card:#131E44; --border:#34407A;
+  --gold:#E2BC4E; --leaf:#E8C35A; --red:#F0675B; --lapis:#8FA8F0; --green:#6CC08A;
+  --mary:#C9D3FF; --christ:#E3C46A; --other:#56618F; --empty:#1C2752; --sea:#0B1430; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E1736; --panel:#152049; --fg:#F1E7CC; --muted:#B4A985; --rule:#26315C; --card:#131E44; --border:#34407A;
+  --gold:#E2BC4E; --leaf:#E8C35A; --red:#F0675B; --lapis:#8FA8F0; --green:#6CC08A;
+  --mary:#C9D3FF; --christ:#E3C46A; --other:#56618F; --empty:#1C2752; --sea:#0B1430; color-scheme:dark}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font:400 18px/1.62 var(--body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));overflow-x:hidden}
+.wrap{max-width:700px;margin:0 auto;padding-block:28px 64px}
+.wrap .bleed{width:min(1100px,calc(100vw - 32px));margin-left:calc((100% - min(1100px,100vw - 32px))/2);margin-right:0}
+a{color:inherit;text-decoration-color:var(--gold);text-underline-offset:3px}
+.kicker{font:500 12px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.kicker b{background:var(--red);color:#fff;padding:5px 8px;font-weight:500}
+header.hero{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px 24px;align-items:end;border-bottom:6px double var(--gold);padding-bottom:22px;margin-top:18px}
+h1{font:900 clamp(52px,13vw,112px)/.88 var(--display);letter-spacing:-.02em;margin:0;text-wrap:balance;font-variation-settings:"SOFT" 50}
+h1 em{font-style:italic;font-weight:600;color:var(--gold)}
+.mark{width:clamp(96px,22vw,180px);height:auto;display:block}
+.dek{grid-column:1/-1;font-size:21px;line-height:1.42;margin:8px 0 0;max-width:44ch}
+.byline{font:400 13px/1.4 var(--mono);color:var(--muted);margin-top:14px}
+h2{font:800 34px/1.04 var(--display);letter-spacing:-.01em;margin:56px 0 10px;text-wrap:balance}
+h2 .n{font:500 13px/1 var(--mono);color:var(--red);display:block;letter-spacing:.1em;margin-bottom:10px}
+h3{font:600 20px/1.25 var(--display);margin:28px 0 6px}
+p{margin:0 0 16px}
+.lede::first-letter{font:900 78px/.8 var(--display);float:left;margin:6px 10px 0 0;color:var(--red);padding:6px 8px 2px;border:2px solid var(--gold);background:var(--card)}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule);margin:26px 0 8px}
+.stats div{background:var(--card);padding:14px 12px}
+.stats b{display:block;font:900 clamp(26px,5.4vw,32px)/1 var(--display);color:var(--fg)}
+.stats b.h{color:var(--gold)}
+.stats span{font:400 12px/1.35 var(--mono);color:var(--muted);display:block;margin-top:6px}
+@media (max-width:600px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.figure{margin:26px 0 30px}
+.fig-h{font:600 19px/1.25 var(--display);margin:0 0 4px}
+.fig-sub{font:400 13px/1.45 var(--mono);color:var(--muted);margin:0 0 12px}
+.src{font:400 12px/1.45 var(--mono);color:var(--muted);margin-top:10px}
+.chart{width:100%;position:relative}
+.chart svg{display:block;width:100%;height:auto;overflow:visible}
+svg text{font-family:var(--mono);fill:var(--fg)}
+.lab{font-size:12px}.lab.m{fill:var(--muted)}.lab.b{font-weight:500}.lab.s{font-size:11px}
+.tip{position:absolute;pointer-events:none;background:var(--fg);color:var(--bg);font:400 12px/1.45 var(--mono);padding:8px 10px;border-radius:3px;max-width:270px;z-index:1000;transform:translate(-50%,calc(-100% - 12px));display:none}
+.tip b{font-weight:500}
+.controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 10px}
+.btn{font:500 12px/1 var(--mono);background:var(--card);color:var(--fg);border:1px solid var(--border);border-radius:3px;padding:8px 10px;cursor:pointer;min-height:36px}
+.btn[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.btn:focus-visible,select:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.seg{display:inline-flex;border:1px solid var(--border);border-radius:3px;overflow:hidden;flex-wrap:wrap}
+.seg .btn{border:0;border-radius:0;border-right:1px solid var(--border)}
+.seg .btn:last-child{border-right:0}
+@media (max-width:600px){.seg{display:grid;grid-template-columns:1fr 1fr;width:100%}.seg .btn{border-bottom:1px solid var(--border)}}
+#ctab td{white-space:nowrap}
+select{font:400 14px/1 var(--mono);background:var(--card);color:var(--fg);border:1px solid var(--border);border-radius:3px;padding:8px 10px;min-height:36px;max-width:100%}
+.mapgrid{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,1fr);gap:18px;align-items:start}
+@media (max-width:820px){.mapgrid{grid-template-columns:1fr}}
+#map{height:clamp(440px,76vh,700px);border:1px solid var(--border);background:var(--sea);border-radius:2px;z-index:0}
+.legend{display:flex;gap:8px 14px;flex-wrap:wrap;font:400 12px/1.3 var(--mono);color:var(--muted);margin-top:8px}
+.legend i{display:inline-block;width:11px;height:11px;margin-right:6px;vertical-align:-1px;clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%)}
+.legend i.c{clip-path:none;border-radius:50%}
+.side{display:flex;flex-direction:column;gap:12px}
+.card{background:var(--card);border:1px solid var(--border);border-left:4px solid var(--gold);padding:12px 14px;font:400 13px/1.5 var(--mono)}
+.card.empty{border-left-color:var(--border);color:var(--muted)}
+.card b{font:600 18px/1.2 var(--display);display:block;margin-bottom:6px}
+.card dl{display:grid;grid-template-columns:auto 1fr;gap:2px 12px;margin:6px 0 8px}
+.card dt{color:var(--muted)}.card dd{margin:0}
+.bar{display:grid;grid-template-columns:minmax(0,1fr) 70px;gap:8px;align-items:center;margin:3px 0}
+.bar span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar em{font-style:normal;color:var(--muted);text-align:right}
+.bar .t{height:6px;background:var(--gold);grid-column:1/-1;margin-top:-2px;opacity:.85}
+.pull{font:600 26px/1.25 var(--display);border-left:6px solid var(--red);padding:4px 0 4px 18px;margin:30px 0}
+.note{background:var(--panel);border:1px solid var(--rule);padding:14px 16px;font-size:16px;margin:22px 0}
+.note h3{margin-top:0}
+table.t{width:100%;border-collapse:collapse;font:400 13px/1.35 var(--mono)}
+table.t th{text-align:left;font-weight:500;color:var(--muted);border-bottom:2px solid var(--fg);padding:6px 8px 6px 0;vertical-align:bottom}
+table.t td{border-bottom:1px solid var(--rule);padding:7px 8px 7px 0;vertical-align:top}
+table.t td.num,table.t th.num{text-align:right}
+.tablewrap{overflow-x:auto}
+.sig{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin:14px 0}
+.sig div{background:var(--card);border:1px solid var(--border);border-top:3px solid var(--gold);padding:10px 12px;font:400 12.5px/1.45 var(--mono);color:var(--muted)}
+.sig b{display:block;font:600 19px/1.15 var(--display);color:var(--fg)}
+.sig span{display:block;color:var(--fg);margin-bottom:4px}
+.cta{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0}
+.cta a{font:500 13px/1 var(--mono);text-decoration:none;border:1px solid var(--fg);padding:11px 14px;border-radius:3px}
+.cta a.p{background:var(--red);border-color:var(--red);color:#fff}
+footer{border-top:6px double var(--gold);margin-top:56px;padding-top:16px;font:400 13px/1.55 var(--mono);color:var(--muted)}
+footer p{margin:0 0 10px}
+.theme{position:fixed;right:12px;bottom:12px;z-index:1001}
+ol.m{padding-left:22px}ol.m li{margin-bottom:8px}
+.leaflet-container{font:400 12px/1.4 var(--mono);background:var(--sea)}
+.leaflet-popup-content-wrapper,.leaflet-popup-tip{background:var(--card);color:var(--fg);border-radius:3px;box-shadow:0 2px 10px rgba(0,0,0,.25)}
+.leaflet-popup-content{margin:10px 12px;font:400 12.5px/1.45 var(--mono)}
+.leaflet-popup-content b{font:600 15px/1.2 var(--display);display:block;margin-bottom:4px}
+.leaflet-container a.leaflet-popup-close-button{color:var(--muted)}
+.leaflet-control-attribution{background:color-mix(in srgb,var(--card) 85%,transparent)!important;color:var(--muted)!important;font-size:10px}
+.leaflet-control-attribution a{color:var(--fg)!important}
+.leaflet-bar a{background:var(--card);color:var(--fg);border-bottom-color:var(--border)}
+.leaflet-bar a:hover{background:var(--panel)}
+.leaflet-bar{border:1px solid var(--border)!important}
+@media print{.theme,.controls{display:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="kicker"><b>Data study</b><span>Faith × landscape</span><span>Western Europe</span></div>
+<header class="hero">
+  <h1>Whose church <em>is it?</em></h1>
+  <svg class="mark" viewBox="-100 -100 200 200" aria-hidden="true"><g id="heroMark"></g></svg>
+  <p class="dek">Almost every old church in Western Europe belongs to someone: a saint, the Virgin, Christ or the Trinity. I sorted {{n_churches|int}} church buildings in twelve countries by their patron to see what that geography looks like, and added Ireland's holy wells.</p>
+</header>
+<div class="byline">Dr Tristan Hotham, Independent researcher · October 2026 · Data: Wikidata (CC0)</div>
+
+<p class="lede" style="margin-top:26px">Walk into a village almost anywhere from Galway to Calabria and the church will usually carry a name: Saint Martin, Saint Peter, Notre-Dame, San Rocco, Sankt Nikolaus. These dedications were chosen over many centuries, for relics, for founders, for local bishops and for fashion, and once given they tended to stick. Put them on one map and you get a mosaic of Europe's saints: some everywhere, some almost nowhere outside one valley.</p>
+<p>Wikidata, the open database behind Wikipedia, lists {{n_churches|int}} church buildings with coordinates in the United Kingdom, Ireland, France, Belgium, the Netherlands, Luxembourg, Germany, Switzerland, Austria, Italy, Spain and Portugal. Only {{n_p825|int}} of them record their dedication in a structured field. For the rest I read the saint from the church's name, in eight languages, and checked that reading against the structured field wherever both exist. They agree {{validation.rules_plus_heldout_aliases.ALL.share|pct0}} of the time. In all, {{n_identified|int}} churches ({{share_identified|pct0}}) have an identifiable dedication.</p>
+
+<div class="stats">
+  <div><b>{{n_identified|int}}</b><span>churches with an identified dedication</span></div>
+  <div><b class="h">{{hex20.lead_any_cells.0.share|pct0}}</b><span>of 20 km hexagons where Mary leads</span></div>
+  <div><b>{{hex20.lead_saint_cells.0.share|pct0}}</b><span>where Peter leads once Mary is set aside</span></div>
+  <div><b class="h">{{wells.ie_top.0.share|pct0}}</b><span>of Ireland's named holy wells are Brigid's</span></div>
+</div>
+<p class="src">Shares are always within a country or region. Wikidata's coverage of churches differs a lot between countries (see section 09), so raw counts across borders would mostly measure the database.</p>
+
+<h2><span class="n">01 · The map</span>A mosaic of patrons</h2>
+<p>Each hexagon is 20 km across the flats and holds every church in it. In the first view the colour is the saint with the most churches in that hexagon, once Mary, Christ, the Trinity, the Holy Cross, the Holy Spirit, the Holy Family and All Saints are set aside (they are not saints in the same sense, and Mary would otherwise colour almost everything). Paler hexagons are ties. Switch to <em>All dedications</em> to see how completely Mary dominates, pick one saint to see where that saint's share is highest, or show the holy wells. Tap a hexagon for its full list.</p>
+<div class="bleed figure">
+  <div class="controls">
+    <div class="seg" role="group" aria-label="Map view">
+      <button class="btn" data-mode="saint" aria-pressed="true">Leading saint</button>
+      <button class="btn" data-mode="any" aria-pressed="false">All dedications</button>
+      <button class="btn" data-mode="one" aria-pressed="false">One saint</button>
+      <button class="btn" data-mode="wells" aria-pressed="false">Holy wells</button>
+    </div>
+    <select id="pick" aria-label="Choose a saint"></select>
+  </div>
+  <div class="mapgrid">
+    <div><div id="map" role="region" aria-label="Map of church dedications by hexagon"></div><div class="legend" id="legend"></div></div>
+    <div class="side">
+      <div class="card empty" id="card">Tap a hexagon to see which dedications it holds.</div>
+      <div class="card" id="pickcard" style="display:none"></div>
+    </div>
+  </div>
+  <p class="src">Hexagons with fewer than 10 identified churches are left pale. Basemap tiles © Esri. Church data: Wikidata (CC0).</p>
+</div>
+
+<h2><span class="n">02 · First of all, Mary</span>The Virgin outnumbers every saint</h2>
+<p>Mary is the most common dedication in every one of the twelve countries and leads in {{hex20.lead_any_cells.0.share|pct0}} of the hexagons with enough data. Her share rises as you go south: {{by_country.PT.share_mary|pct0}} of identified churches in Portugal, {{by_country.IT.share_mary|pct0}} in Italy and {{by_country.ES.share_mary|pct0}} in Spain, against {{by_country.GB.share_mary|pct0}} in the United Kingdom, {{by_country.DE.share_mary|pct0}} in Germany and {{by_country.LU.share_mary|pct0}} in Luxembourg. I have counted every Marian title as one: Notre-Dame, Our Lady of Mount Carmel, the Assumption, Mariä Himmelfahrt, Nuestra Señora del Pilar and the rest.</p>
+<div class="figure">
+  <p class="fig-h">Share of identified churches dedicated to Mary, and to Christ and the Trinity</p>
+  <p class="fig-sub">Christ and the Trinity includes the Holy Cross, the Holy Spirit and the Holy Family. Hover or tap a bar.</p>
+  <div class="chart" id="maryc"></div>
+</div>
+<p>The second band, dedications to Christ himself, to the Trinity or to the Cross, is largest in Austria ({{by_country.AT.share_dominical|pct0}}), Germany ({{by_country.DE.share_dominical|pct0}}) and Ireland ({{by_country.IE.share_dominical|pct0}}). In Germany part of that is Protestant: churches built after the Reformation are more often called Christuskirche or Erlöserkirche than after a saint, and many have no dedication in their name at all.</p>
+
+<h2><span class="n">03 · Peter, John and Martin</span>The three great patrons</h2>
+<p>Set Mary aside and three names take most of the map. Peter leads in {{hex20.lead_saint_cells.0.share|pct0}} of hexagons, John in {{hex20.lead_saint_cells.1.share|pct0}} and Martin in {{hex20.lead_saint_cells.2.share|pct0}}. ('John' here is the Baptist and the Evangelist together, because a name such as Johanniskirche or St John's rarely says which.) Peter is strong almost everywhere and peaks in {{selected.Peter.top_regions.0.name}} ({{selected.Peter.top_regions.0.share|pct0}} of churches). John runs through northern England and western Germany, with the highest shares in {{selected.John.top_regions.0.name}} and {{selected.John.top_regions.1.name}}.</p>
+<p>Martin of Tours, the soldier who cut his cloak in half for a beggar, is the saint of France. With {{selected.Martin.by_country.FR|pct1}} of French churches he is second only to Peter among the saints, and his heartland is the north: {{selected.Martin.top_regions.0.name}} ({{selected.Martin.top_regions.0.share|pct0}}), {{selected.Martin.top_regions.1.name}} ({{selected.Martin.top_regions.1.share|pct0}}) and {{selected.Martin.top_regions.2.name}} ({{selected.Martin.top_regions.2.share|pct0}}). Across the Channel he falls to {{selected.Martin.by_country.GB|pct1}}.</p>
+<div class="bleed figure">
+  <p class="fig-h">Where the well-known saints are strongest</p>
+  <p class="fig-sub">Share of each country's identified churches. Circle area shows the share; the largest in each row is gold. Hover or tap a circle.</p>
+  <div class="chart" id="matrix"></div>
+</div>
+
+<h2><span class="n">04 · Saints with a home</span>Regional patrons</h2>
+<p>Some saints are a map of one region's history. The early saints of Ireland, Wales, Scotland, Cornwall and Brittany (a group of {{celtic_n|raw}} names, listed in the methods) account for {{by_country.IE.share_celtic|pct0}} of Irish churches and {{by_country.GB.share_celtic|pct1}} of British ones, peaking in {{selected.Celtic saints.top_regions.0.name}} ({{selected.Celtic saints.top_regions.0.share|pct0}}) and {{selected.Celtic saints.top_regions.1.name}} ({{selected.Celtic saints.top_regions.1.share|pct0}}). In France they are {{selected.Celtic saints.by_country.FR|pct1}} of churches overall but {{celtic_bretagne|pct0}} in Brittany.</p>
+<p>Nicholas, patron of sailors and merchants, is strongest along the North Sea and Baltic coasts: {{selected.Nicholas.top_regions.0.name}} ({{selected.Nicholas.top_regions.0.share|pct0}}), {{selected.Nicholas.top_regions.1.name}} and {{selected.Nicholas.top_regions.2.name}}. Lambert, the bishop of Maastricht killed at Liège, belongs to the Low Countries, peaking in {{selected.Lambert.top_regions.0.name}} ({{selected.Lambert.top_regions.0.share|pct1}}). Boniface, killed near Dokkum, has his highest share in {{selected.Boniface.top_regions.0.name}} ({{selected.Boniface.top_regions.0.share|pct1}}); Kilian, martyred at Würzburg, in {{selected.Kilian.top_regions.0.name}} ({{selected.Kilian.top_regions.0.share|pct1}}); Ambrose of Milan in {{selected.Ambrose.top_regions.0.name}} ({{selected.Ambrose.top_regions.0.share|pct1}}) and {{selected.Ambrose.top_regions.1.name}} ({{selected.Ambrose.top_regions.1.share|pct1}}). These are small shares, but they are almost nowhere else.</p>
+<p>To find each region's own saint, I looked for the saint with at least eight churches in a region whose share there most exceeds its share in the rest of the same country. The result is a roll-call of local bishops, hermits and founders, many with every one of their country's churches in that one region:</p>
+<div class="sig" id="sig"></div>
+<p class="src">Regions are NUTS 2016 level 2. 'Of the country's' counts churches with that dedication in the same country.</p>
+
+<h2><span class="n">05 · The road to Santiago</span>James near his shrine</h2>
+<p>By tradition the apostle James is buried at Santiago de Compostela, the goal of one of medieval Europe's great pilgrimages. In Spain, his share of churches does fall away with distance from the cathedral: {{james.bands.ES.0.share|pct1}} of churches within 150 km (mostly Galicia), {{james.bands.ES.2.share|pct1}} at 300 to 500 km and {{james.bands.ES.3.share|pct1}} at 500 to 750 km. Galicia as a whole has {{james.galicia_share|pct1}}, against {{james.spain_share|pct1}} for Spain. Beyond Spain the gradient is faint: France's share drifts from {{james.bands.FR.0.share|pct1}} in the south-west to {{james.bands.FR.2.share|pct1}} beyond 1,000 km, and Britain, at {{selected.James.by_country.GB|pct1}}, has more of him than France. Pilgrim roads may have spread his cult, but they do not leave a clear trail in church names.</p>
+<div class="figure">
+  <p class="fig-h">Share of churches dedicated to James, by distance from Santiago de Compostela</p>
+  <p class="fig-sub">Distance bands with at least 150 identified churches. Hover or tap a point.</p>
+  <div class="chart" id="jamesc"></div>
+</div>
+
+<h2><span class="n">06 · Michael on the heights?</span>A test in Britain and Ireland</h2>
+<p>Michael the archangel is often said to favour high places: Mont-Saint-Michel, St Michael's Mount, the tower on Glastonbury Tor. I tested this where I have terrain data, in Britain and Ireland. Churches of St Michael do stand on higher ground overall (median {{michael.median_elev_michael|f0}} m above sea level against {{michael.median_elev_other|f0}} m for other dedications), but they are not more often on a local high point. {{michael.share_top_michael|pct1}} of Michael's {{michael.n_michael|int}} churches stand higher than at least 90% of the ground within 1 km, against {{michael.share_top_other|pct1}} of other churches, and Michael ranks {{michael.rank_of_michael|raw}} of {{michael.n_ranked|raw}} dedications on that measure. The famous hilltop Michaels are real, but they are a small part of a large, mostly lowland cult.</p>
+<div class="figure">
+  <p class="fig-h">Share of each dedication's churches on local high ground</p>
+  <p class="fig-sub">Britain and Ireland, dedications with 150 or more churches. 'Local high ground': higher than at least 90% of 24 points 500 m and 1 km away.</p>
+  <div class="chart" id="heightc"></div>
+</div>
+
+<h2><span class="n">07 · Variety</span>Where every church has a different saint</h2>
+<p>A way to measure variety that is fair to regions of different size is to ask how many different dedications you would meet among 100 churches picked at random. The answer ranges from {{richest.0.richness100|f0}} in {{richest.0.name}} to {{poorest.9.richness100|f0}} in {{poorest.9.name}}. The Celtic west is the most varied place in Western Europe: {{richest.1.name}} ({{richest.1.richness100|f0}}) and {{richest.3.name}} ({{richest.3.richness100|f0}}) follow Cornwall, where many parishes keep the name of their own early saint. The least varied are scattered, from {{poorest.9.name}} and {{poorest.7.name}} to {{poorest.8.name}} and {{poorest.6.name}}, and mostly they are places where Mary or a few great saints take a large share. Across the {{n_regions_rich|raw}} regions with enough churches, variety and Mary's share have a correlation of {{richness_corr_mary|f2}}.</p>
+<div class="figure">
+  <p class="fig-h">Different dedications per 100 churches: most and least varied regions</p>
+  <p class="fig-sub">Expected number of distinct dedications in a random 100 identified churches (rarefaction). Regions with at least 100 identified churches.</p>
+  <div class="chart" id="richc"></div>
+</div>
+
+<h2><span class="n">08 · Holy wells</span>Brigid's water</h2>
+<p>Wikidata holds {{wells.n|int}} holy wells in the study countries, {{wells.by_country.IE|int}} of them in Ireland, so this is really an Irish story (the British, French and Italian lists are short). Of the Irish wells, {{wells.ie_identified|int}} have a name I can read as a saint, and the top of that list looks quite unlike Ireland's churches. Brigid holds {{wells.ie_top.0.share|pct0}} of the named wells but only {{wells.ie_top.0.church_share|pct1}} of the churches; Mary {{wells.ie_top.1.share|pct0}} of wells against {{wells.ie_top.1.church_share|pct0}} of churches. The early Irish saints together hold {{wells.ie_celtic_share|pct0}} of named wells against {{wells.ie_church_celtic_share|pct0}} of churches. Wells are older, smaller, more local places of devotion, and Brigid is at home there.</p>
+<div class="figure">
+  <p class="fig-h">Ireland: holy wells and churches, by dedication</p>
+  <p class="fig-sub">Share of named wells (gold) and of identified churches (ink). Hover or tap a bar.</p>
+  <div class="chart" id="wellc"></div>
+</div>
+
+<h2><span class="n">09 · What the data can say</span>Coverage, country by country</h2>
+<p>Wikidata is uneven. It has {{by_country.IT.per_1000km2|f0}} church buildings per 1,000 km² for Italy but {{by_country.PT.per_1000km2|f0}} for Portugal and {{by_country.ES.per_1000km2|f0}} for Spain. The share I can assign to a saint ranges from {{by_country.IT.share_identified|pct0}} in Italy to {{by_country.CH.share_identified|pct0}} in Switzerland and {{by_country.DE.share_identified|pct0}} in Germany, where many Protestant churches carry only a village name. Belgium records {{by_country.BE.share_p825|pct0}} of dedications in the structured field; Germany {{by_country.DE.share_p825|pct0}}. That is why every figure on this page is a share within a country or region.</p>
+<div class="figure">
+  <p class="fig-h">Churches, coverage and leading saints by country</p>
+  <div class="tablewrap"><table class="t" id="ctab"></table></div>
+</div>
+<div class="figure">
+  <p class="fig-h">How well the name reader agrees with Wikidata's own dedications</p>
+  <p class="fig-sub">Churches that have both a structured dedication (P825) and a saint in their name: share where the name gives the same saint. Name rules plus aliases learned from the other half of the churches.</p>
+  <div class="chart" id="valc"></div>
+</div>
+
+<h2><span class="n">10 · Method</span>How I did it</h2>
+<ol class="m">
+<li><b>Churches.</b> Every Wikidata item classed as a church building with coordinates in the twelve countries, extracted per country, deduplicated by item and kept if it falls on the European mainland or islands (no Canaries, Azores, Madeira or overseas France): {{n_churches|int}} buildings. The list includes chapels, ruins and some former churches.</li>
+<li><b>Dedication.</b> Where Wikidata records 'dedicated to' (P825) I use it ({{n_p825|int}} churches). Otherwise I read the name: saint prefixes in each language (St, Saint, Sainte, Sankt, Hl., Sint, San, Santa, Santo, Santi, Sant', São and more), French hyphenated forms (Saint-Martin, but not 'église de Saint-Rémy', which is a place), German and Dutch compounds (Martinskirche, Nikolaikirche, Marienkerk), and fixed titles (Notre-Dame, Unserer Lieben Frau, Onze-Lieve-Vrouw, Nuestra Señora, Nossa Senhora, Madonna, Sacré-Cœur, Holy Trinity, Santiago). A table of name forms maps the languages to one saint: Pierre, Pietro, Pedro, Petrus and Pieter are all Peter. It combines a hand-written core with the English, French, German, Spanish, Italian and Latin labels of all {{n_ded_items|int}} dedication items used in the data. Names the table does not know stand as their own saint.</li>
+<li><b>Name level.</b> I group by name, not person: John is the Baptist and the Evangelist, James the Greater and the Less, Anthony of Padua and the Abbot. All Marian titles are Mary. The first saint named is the church's dedication; {{share_multi_dedication|pct1}} of identified churches name more than one.</li>
+<li><b>Checking.</b> Of {{validation.core_rules.ALL.both|int}} churches with both P825 and a saint in their name, the name reader agrees with P825 on {{validation.core_rules.ALL.share|pct1}}. I then learned {{validation.n_aliases|raw}} aliases for names the rules did not know (such as Flemish Kwintens for Quentin) from churches that have both; learned on one half of the churches and tested on the other, agreement is {{validation.rules_plus_heldout_aliases.ALL.share|pct1}}.</li>
+<li><b>Maps and regions.</b> Hexagons are 20 km from centre to corner in the European LAEA projection. Regions are NUTS 2016 level 2 (Eurostat GISCO). Variety is rarefied richness at 100 churches. Signature saints need at least eight churches in the region.</li>
+<li><b>Michael and height.</b> Ground height from AWS Terrain Tiles (zoom 10) at each church in Britain and Ireland, compared with 24 points 500 m and 1 km away.</li>
+<li><b>Holy wells.</b> {{wells.n|int}} Wikidata holy wells in the study countries; dedication from P825 or the name (St X's Well, Lady's Well, and Irish Tobar Mhuire, Tobar Bhríde and Tobar Phádraig forms).</li>
+</ol>
+<div class="note">
+<h3>Caveats</h3>
+<p>This is a map of Wikidata, not a census of churches: coverage and the use of P825 differ by country, region and even by editor. Reading saints from names is right about {{validation.rules_plus_heldout_aliases.ALL.share|pct0}} of the time where it can be checked, and probably less well for rare local saints. A dedication can change over the centuries, and a modern name may not be the medieval one. Ties between saints in small hexagons are broken by the saint's overall frequency. The Celtic saints group is my own list of early medieval saints of Ireland, Scotland, Wales, Cornwall and Brittany ({{celtic_n|raw}} names); continental missionaries of Irish birth such as Columbanus, Gall, Fiacre and Kilian are not in it.</p>
+</div>
+<p class="src">Celtic group: <span id="celtlist"></span>.</p>
+
+<div class="cta">
+  <a class="p" href="https://blog.tristanhotham.com/2026/10/27/saints-and-wells/">Read the blog post</a>
+  <a href="https://doi.org/10.5281/zenodo.23677171">Paper and data (Zenodo)</a>
+  <a href="https://github.com/Tristan-Hotham/saints-and-wells">Data and code</a>
+  <a href="https://blog.tristanhotham.com/">More history data</a>
+</div>
+
+<footer>
+  <p>Dr Tristan Hotham, researcher on social media, campaigns and politics. Independent researcher. ORCID <a href="https://orcid.org/0000-0003-4931-9349">0000-0003-4931-9349</a>.</p>
+  <p>Cite as: Hotham, T. (2026) <i>Whose Church Is It? Church dedications and holy wells across Western Europe</i>. Zenodo. <a href="https://doi.org/10.5281/zenodo.23677171">https://doi.org/10.5281/zenodo.23677171</a></p>
+  <p>Church and holy well data: <a href="https://www.wikidata.org/">Wikidata</a>, CC0. Regions: Eurostat GISCO NUTS 2016, © EuroGeographics for the administrative boundaries. Country outlines: Natural Earth (public domain). Terrain: <a href="https://registry.opendata.aws/terrain-tiles/">AWS Terrain Tiles</a> by Mapzen/Tilezen (<a href="https://github.com/tilezen/joerd/blob/master/docs/attribution.md">attribution</a>). Base map tiles © Esri. Map library: Leaflet.</p>
+  <p>The derived data and text on this page are released under CC BY 4.0. Code is MIT.</p>
+  <p>I wrote the text, with drafting and editing assistance from Claude (Anthropic), which also helped prepare the analysis code. I reviewed and checked all text and results.</p>
+</footer>
+</div>
+<div class="tip" id="tip"></div>
+<button class="btn theme" id="theme" aria-label="Toggle dark mode">◐</button>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+/*DATA*/
+const NS = "http://www.w3.org/2000/svg";
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const el = (t, a = {}, p) => { const e = document.createElementNS(NS, t); for (const k in a) e.setAttribute(k, a[k]); if (p) p.appendChild(e); return e; };
+const fmt = n => Math.round(n).toLocaleString("en-GB");
+const pc = (x, d = 0) => (x * 100).toFixed(d) + "%";
+const tip = document.getElementById("tip");
+function showTip(h, x, y) { tip.innerHTML = h; tip.style.display = "block"; const w = tip.offsetWidth; x = Math.max(w / 2 + 8, Math.min(innerWidth - w / 2 - 8, x)); tip.style.left = x + scrollX + "px"; tip.style.top = y + scrollY + "px"; }
+function hideTip() { tip.style.display = "none"; }
+function hover(node, h) { node.style.cursor = "pointer"; node.setAttribute("tabindex", "0"); const s = () => { const r = node.getBoundingClientRect(); showTip(h, r.left + r.width / 2, r.top); }; node.addEventListener("pointerenter", s); node.addEventListener("focus", s); node.addEventListener("pointerleave", hideTip); node.addEventListener("blur", hideTip); node.addEventListener("click", e => { e.stopPropagation(); s(); }); }
+document.addEventListener("click", hideTip);
+const redraws = [];
+function resp(box, render) { let last = 0; const go = (force) => { const w = Math.max(280, Math.round(box.clientWidth)); if (!force && Math.abs(w - last) < 4) return; last = w; box.innerHTML = ""; render(w, w < 560); }; new ResizeObserver(() => go()).observe(box); redraws.push(() => go(true)); go(); }
+const lbl = (svg, x, y, s, cls = "lab", anchor = "start") => { const t = el("text", { x, y, class: cls, "text-anchor": anchor }, svg); t.textContent = s; return t; };
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const R = D.R;
+const CN = Object.fromEntries(R.countries.map(c => [c.cc, c.name]));
+document.getElementById("theme").onclick = () => { const r = document.documentElement; const dark = r.dataset.theme ? r.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches; r.dataset.theme = dark ? "light" : "dark"; redraws.forEach(f => f()); window.__restyle && window.__restyle(); };
+const isDark = () => { const r = document.documentElement; return r.dataset.theme ? r.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches; };
+/* saint palette, shared with the blog figures and the collage */
+const PAL = { Peter: "#3E6FC4", John: "#1E9C8A", Martin: "#C8372D", Michael: "#D9A520", Anthony: "#A0683A", Nicholas: "#8657C2", Joseph: "#97A12E", Roch: "#D46A9A", James: "#E57F2B", Andrew: "#6FB3E3", Patrick: "#3B9A48", Sebastian: "#8A96A8" };
+const NONSAINT = new Set(["Mary", "Christ", "Holy Trinity", "Holy Cross", "Holy Spirit", "Holy Family", "All Saints"]);
+const colOf = k => PAL[k] || (k === "Mary" ? css("--mary") : NONSAINT.has(k) ? css("--christ") : css("--other"));
+
+/* hero mark: a hexagon rosette in gold leaf */
+(() => { const g = document.getElementById("heroMark"); const s = 26, h = Math.sqrt(3) * s;
+  const cols = ["#C8372D", "#3E6FC4", "#1E9C8A", "#D9A520", "#8657C2", "#E57F2B", "#3B9A48"];
+  const pos = [[0, 0], [h, 0], [-h, 0], [h / 2, 1.5 * s], [-h / 2, 1.5 * s], [h / 2, -1.5 * s], [-h / 2, -1.5 * s]];
+  pos.forEach(([x, y], i) => { const pts = [...Array(6)].map((_, j) => { const a = Math.PI / 180 * (60 * j + 30); return `${x + (s - 2) * Math.cos(a)},${y + (s - 2) * Math.sin(a)}`; }).join(" ");
+    el("polygon", { points: pts, fill: cols[i], stroke: "var(--leaf)", "stroke-width": 2.4 }, g); });
+  el("circle", { cx: 0, cy: 0, r: 7, fill: "var(--leaf)" }, g);
+})();
+
+/* ===== map ===== */
+const KEYS = D.keys, KI = Object.fromEntries(KEYS.map((k, i) => [k, i]));
+const CELLS = D.cells.map(c => { const cnt = {}; for (let i = 0; i < c[9].length; i += 2) cnt[c[9][i]] = c[9][i + 1];
+  const v = []; for (let i = 0; i < 12; i += 2) v.push([c[0][i], c[0][i + 1]]); return { v, n: c[1], ni: c[2], cc: D.cc[c[3]], saint: c[4], sn: c[5], tie: c[6], lead: c[7], ln: c[8], cnt, top: c[10] }; });
+(() => {
+  const pick = document.getElementById("pick"); const og1 = document.createElement("optgroup"); og1.label = "Featured"; const og2 = document.createElement("optgroup"); og2.label = "All with 150+ churches";
+  KEYS.forEach((k, i) => { const o = document.createElement("option"); o.value = k; o.textContent = k; (i < D.featured ? og1 : og2).appendChild(o); });
+  pick.append(og1, og2); pick.value = "Martin";
+  const card = document.getElementById("card"), pcard = document.getElementById("pickcard");
+  if (!window.L) { document.getElementById("map").innerHTML = '<p style="padding:16px;font:400 13px/1.5 var(--mono)">The map library did not load. The charts below still work.</p>'; return; }
+  let mode = "saint", saint = "Martin", sel = null;
+  const map = L.map("map", { preferCanvas: true, scrollWheelZoom: false, zoomSnap: .25, minZoom: 4, maxZoom: 11 }).fitBounds([[36.2, -10.5], [59.5, 17.5]]);
+  map.attributionControl.setPrefix('<a href="https://leafletjs.com">Leaflet</a>');
+  map.on("focus", () => map.scrollWheelZoom.enable()); map.on("blur", () => map.scrollWheelZoom.disable());
+  const tileUrl = () => `https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/${isDark() ? "World_Dark_Gray_Base" : "World_Light_Gray_Base"}/MapServer/tile/{z}/{y}/{x}`;
+  const tiles = L.tileLayer(tileUrl(), { maxZoom: 16, attribution: "Tiles &copy; Esri · Churches: Wikidata (CC0)" }).addTo(map);
+  const rend = L.canvas({ padding: .3, tolerance: 2 });
+  const polys = CELLS.map(c => { const p = L.polygon(c.v, { renderer: rend, weight: .6 }); p.on("click", e => { L.DomEvent.stopPropagation(e); select(c); }); p.addTo(map); return p; });
+  const wellLayer = L.layerGroup();
+  const WC = { Brigid: "#3B9A48", Mary: null, Patrick: "#D9A520" };
+  const wellMarks = D.wells.map(w => { const m = L.circleMarker([w[0], w[1]], { renderer: rend, radius: 3.6, weight: .8, fillOpacity: .95 });
+    m.bindPopup(`<b>${esc(w[3] || "Holy well")}</b>${w[2] ? "Dedication: " + esc(w[2]) : "No saint identified"}<br>${esc(CN[w[4]] || w[4])}`); m.addTo(wellLayer); m.__k = w[2]; return m; });
+  function shareBins() { const k = KI[saint]; const sh = CELLS.filter(c => c.ni >= 10).map(c => (c.cnt[k] || 0) / c.ni).sort((a, b) => a - b);
+    const p95 = sh[Math.floor(sh.length * .95)] || .01; const top = Math.max(.01, p95); return [0, top * .15, top * .35, top * .6, top * .85].map(x => x); }
+  const ramp = t => { const a = isDark() ? [28, 39, 82] : [240, 230, 205], b = isDark() ? [232, 195, 90] : [140, 26, 18];
+    const m = isDark() ? [200, 120, 60] : [217, 160, 45];
+    const lerp = (x, y, u) => x.map((v, i) => Math.round(v + (y[i] - v) * u));
+    const c = t < .5 ? lerp(a, m, t * 2) : lerp(m, b, (t - .5) * 2); return `rgb(${c.join(",")})`; };
+  let bins = [];
+  function style() {
+    const empty = css("--empty"), bord = css("--bg");
+    if (mode === "one") bins = shareBins();
+    CELLS.forEach((c, i) => { let fill = empty, op = .9, w = .5;
+      if (mode === "wells") { fill = empty; op = .5; }
+      else if (c.ni < 10) { fill = empty; op = .55; }
+      else if (mode === "saint") { fill = colOf(c.saint); op = c.tie ? .42 : .92; }
+      else if (mode === "any") { fill = colOf(c.lead); op = .9; }
+      else { const s = (c.cnt[KI[saint]] || 0) / c.ni; let b = 0; for (let j = 0; j < bins.length; j++) if (s >= bins[j] && (j === 0 ? s > 0 : true)) b = j + (s > 0 ? 1 : 0); b = Math.min(b, 5); fill = s === 0 ? empty : ramp((b - 1) / 4); op = s === 0 ? .7 : .92; }
+      if (sel === c) { w = 2.4; }
+      polys[i].setStyle({ fillColor: fill, fillOpacity: op, color: sel === c ? css("--fg") : bord, weight: w, opacity: sel === c ? 1 : .7 }); });
+    if (sel) polys[CELLS.indexOf(sel)].bringToFront();
+    wellMarks.forEach(m => m.setStyle({ fillColor: m.__k === "Brigid" ? "#3B9A48" : m.__k === "Mary" ? css("--mary") : m.__k === "Patrick" ? "#D9A520" : m.__k ? css("--red") : css("--muted"), color: css("--bg") }));
+    legend();
+  }
+  function legend() {
+    const L2 = []; const sw = (c, t, cls = "") => `<span><i class="${cls}" style="background:${c}"></i>${t}</span>`;
+    if (mode === "saint") { Object.keys(PAL).forEach(k => L2.push(sw(PAL[k], k))); L2.push(sw(css("--other"), "Other saint"), sw(css("--empty"), "Fewer than 10 churches")); }
+    else if (mode === "any") { L2.push(sw(css("--mary"), "Mary"), sw(css("--christ"), "Christ, Trinity, Cross, All Saints")); ["Peter", "Martin", "John", "Michael", "Nicholas", "Patrick", "Andrew"].forEach(k => L2.push(sw(PAL[k], k))); L2.push(sw(css("--other"), "Other saint")); }
+    else if (mode === "one") { L2.push(sw(css("--empty"), "None")); for (let j = 1; j <= 5; j++) L2.push(sw(ramp((j - 1) / 4), j === 1 ? `up to ${pc(bins[1], 1)}` : j < 5 ? `${pc(bins[j - 1], 1)} to ${pc(bins[j], 1)}` : `${pc(bins[4], 1)} or more`)); L2.push(`<span>Share of the hexagon's churches: ${esc(saint)}</span>`); }
+    else { L2.push(sw("#3B9A48", "Brigid", "c"), sw(css("--mary"), "Mary", "c"), sw("#D9A520", "Patrick", "c"), sw(css("--red"), "Other saint", "c"), sw(css("--muted"), "No saint in the name", "c")); }
+    document.getElementById("legend").innerHTML = L2.join("");
+  }
+  function select(c) {
+    sel = c; style();
+    if (!c) { card.className = "card empty"; card.textContent = "Tap a hexagon to see which dedications it holds."; return; }
+    card.className = "card";
+    card.innerHTML = `<b>${esc(CN[c.cc])}, one hexagon</b><dl><dt>Churches</dt><dd>${fmt(c.n)}</dd><dt>Identified</dt><dd>${fmt(c.ni)}</dd><dt>Leading saint</dt><dd>${esc(c.saint || "none")}${c.tie ? " (tie)" : ""}</dd></dl>` +
+      c.top.map(([k, n]) => `<div class="bar"><span>${esc(k)}</span><em>${n} · ${pc(n / c.ni)}</em><div class="t" style="width:${n / c.top[0][1] * 100}%;background:${colOf(k)}"></div></div>`).join("") +
+      (mode === "one" ? `<div style="margin-top:8px">${esc(saint)}: ${c.cnt[KI[saint]] || 0} of ${c.ni} (${pc((c.cnt[KI[saint]] || 0) / Math.max(1, c.ni), 1)})</div>` : "");
+  }
+  function pickInfo() {
+    if (mode !== "one") { pcard.style.display = "none"; return; }
+    const s = R.selected[saint]; pcard.style.display = "block";
+    if (s) { const rows = Object.entries(s.by_country).sort((a, b) => b[1] - a[1]);
+      pcard.innerHTML = `<b>${esc(saint)}</b><div style="color:var(--muted)">Share of each country's identified churches</div>` + rows.map(([c, v]) => `<div class="bar"><span>${esc(CN[c])}</span><em>${pc(v, 1)}</em><div class="t" style="width:${v / rows[0][1] * 100}%"></div></div>`).join("") +
+        `<div style="margin-top:8px;color:var(--muted)">Highest region: ${esc(s.top_regions[0].name)} (${pc(s.top_regions[0].share, 1)})</div>`; }
+    else { const k = KI[saint]; let n = 0, ni = 0; const byc = {}; CELLS.forEach(c => { const v = c.cnt[k] || 0; n += v; byc[c.cc] = byc[c.cc] || [0, 0]; byc[c.cc][0] += v; byc[c.cc][1] += c.ni; });
+      const rows = Object.entries(byc).map(([c, [a, b]]) => [c, a / b]).sort((a, b) => b[1] - a[1]);
+      pcard.innerHTML = `<b>${esc(saint)}</b><div style="color:var(--muted)">${fmt(n)} churches. Share of each country's identified churches</div>` + rows.slice(0, 8).map(([c, v]) => `<div class="bar"><span>${esc(CN[c])}</span><em>${pc(v, 2)}</em><div class="t" style="width:${v / rows[0][1] * 100}%"></div></div>`).join(""); }
+  }
+  function setMode(m) { mode = m; document.querySelectorAll("[data-mode]").forEach(b => b.setAttribute("aria-pressed", b.dataset.mode === m)); pick.style.display = m === "one" ? "" : "none";
+    if (m === "wells") { wellLayer.addTo(map); map.flyToBounds([[51.3, -10.6], [55.5, -5.4]], { duration: .6 }); } else map.removeLayer(wellLayer);
+    style(); pickInfo(); if (sel) select(sel); }
+  document.querySelectorAll("[data-mode]").forEach(b => b.onclick = () => setMode(b.dataset.mode));
+  pick.onchange = () => { saint = pick.value; style(); pickInfo(); if (sel) select(sel); };
+  map.on("click", () => select(null));
+  window.__restyle = () => { tiles.setUrl(tileUrl()); style(); pickInfo(); if (sel) select(sel); };
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", window.__restyle);
+  window.__mode = setMode; window.__pick = k => { pick.value = k; pick.onchange(); };
+  setMode("saint");
+})();
+
+/* ===== Mary and dominical by country ===== */
+resp(document.getElementById("maryc"), (W, nar) => {
+  const rows = [...R.countries].sort((a, b) => b.share_mary - a.share_mary), rowH = 28, m = { l: nar ? 100 : 130, r: 52, t: 6, b: 30 }, H = rows.length * rowH + m.t + m.b;
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Share of churches dedicated to Mary by country" }, document.getElementById("maryc"));
+  const max = .5, X = v => m.l + v / max * (W - m.l - m.r);
+  [0, .1, .2, .3, .4, .5].forEach(t => { el("line", { x1: X(t), x2: X(t), y1: m.t, y2: H - m.b, stroke: "var(--rule)" }, svg); lbl(svg, X(t), H - m.b + 16, pc(t), "lab m s", "middle"); });
+  rows.forEach((r, i) => { const y = m.t + i * rowH; lbl(svg, m.l - 8, y + 18, r.name, "lab", "end");
+    const a = el("rect", { x: m.l, y: y + 5, width: X(r.share_mary) - m.l, height: rowH - 10, fill: "var(--mary)" }, svg);
+    const b = el("rect", { x: X(r.share_mary), y: y + 5, width: X(r.share_mary + r.share_dominical) - X(r.share_mary), height: rowH - 10, fill: "var(--christ)", opacity: .8 }, svg);
+    hover(a, `<b>${r.name}: Mary</b><br>${pc(r.share_mary, 1)} of ${fmt(r.n_identified)} identified churches`); hover(b, `<b>${r.name}: Christ and the Trinity</b><br>${pc(r.share_dominical, 1)}`);
+    lbl(svg, X(r.share_mary + r.share_dominical) + 6, y + 18, pc(r.share_mary), "lab b s"); });
+});
+
+/* ===== saint by country matrix ===== */
+resp(document.getElementById("matrix"), (W, nar) => {
+  const rowsK = ["Peter", "Martin", "John", "Michael", "Nicholas", "James", "Andrew", "Anthony", "Lambert", "Celtic saints", "Boniface", "Kilian", "Ambrose"];
+  const cols = R.countries.map(c => c.cc), m = { l: nar ? 92 : 120, r: 8, t: 34, b: 8 }, cw = (W - m.l - m.r) / cols.length, rowH = nar ? 30 : 34, H = m.t + rowsK.length * rowH + m.b;
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Share of churches dedicated to selected saints, by country" }, document.getElementById("matrix"));
+  cols.forEach((c, j) => lbl(svg, m.l + cw * (j + .5), 20, c, "lab m s", "middle"));
+  const rmax = Math.min(cw, rowH) / 2 - 1.5;
+  rowsK.forEach((k, i) => { const y = m.t + i * rowH + rowH / 2; const s = R.selected[k].by_country; const mx = Math.max(...Object.values(s));
+    lbl(svg, m.l - 8, y + 4, k === "Celtic saints" ? (nar ? "Celtic" : "Celtic saints") : k, "lab", "end");
+    el("line", { x1: m.l, x2: W - m.r, y1: y, y2: y, stroke: "var(--rule)" }, svg);
+    cols.forEach((c, j) => { const v = s[c]; const r = Math.max(1, Math.sqrt(v / .17) * rmax);
+      const ci = el("circle", { cx: m.l + cw * (j + .5), cy: y, r: Math.min(r, rmax), fill: v === mx ? "var(--gold)" : (PAL[k] || "var(--lapis)"), opacity: v === mx ? 1 : .8, stroke: "var(--bg)", "stroke-width": .8 }, svg);
+      hover(ci, `<b>${k}, ${CN[c]}</b><br>${pc(v, 1)} of identified churches`); }); });
+});
+
+/* ===== signature saints ===== */
+(() => { const box = document.getElementById("sig");
+  box.innerHTML = R.signature_regions.slice(0, 18).map(s => `<div><span>${esc(s.name)}, ${esc(CN[s.cc])}</span><b>${esc(s.key)}</b>${s.n === s.n_country ? "All " + s.n : s.n + " of " + s.n_country} of the country's churches to this saint are here</div>`).join("");
+  document.getElementById("celtlist").textContent = R.celtic_members.join(", ");
+})();
+
+/* ===== James by distance ===== */
+resp(document.getElementById("jamesc"), (W, nar) => {
+  const H = nar ? 250 : 270, m = { l: 46, r: 16, t: 14, b: 44 }, svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Share of churches dedicated to James by distance from Santiago" }, document.getElementById("jamesc"));
+  const series = [["ES", "Spain", "#E57F2B"], ["PT", "Portugal", "var(--green)"], ["FR", "France", "var(--lapis)"], ["GB", "United Kingdom", "var(--muted)"]];
+  const maxD = 1600, maxY = .07, X = d => m.l + d / maxD * (W - m.l - m.r), Y = v => H - m.b - v / maxY * (H - m.t - m.b);
+  for (let t = 0; t <= maxY + 1e-9; t += .01) { el("line", { x1: m.l, x2: W - m.r, y1: Y(t), y2: Y(t), stroke: "var(--rule)" }, svg); lbl(svg, m.l - 6, Y(t) + 4, pc(t), "lab m s", "end"); }
+  [0, 400, 800, 1200, 1600].forEach(t => lbl(svg, X(t), H - m.b + 16, fmt(t) + " km", "lab m s", "middle"));
+  lbl(svg, (W + m.l) / 2, H - 6, "Distance from the cathedral of Santiago de Compostela", "lab m s", "middle");
+  series.forEach(([c, name, col], si) => { const b = R.james.bands[c]; if (!b || !b.length) return; const mid = x => Math.min(x.hi, 1500) / 2 + x.lo / 2;
+    el("path", { d: "M" + b.map(x => `${X(mid(x))} ${Y(x.share)}`).join("L"), fill: "none", stroke: col, "stroke-width": 2.4 }, svg);
+    b.forEach(x => { const ci = el("circle", { cx: X(mid(x)), cy: Y(x.share), r: 4.5, fill: col, stroke: "var(--bg)", "stroke-width": 1.5 }, svg); hover(ci, `<b>${name}, ${fmt(x.lo)} to ${fmt(x.hi)} km</b><br>James: ${pc(x.share, 1)} of ${fmt(x.n)} churches`); });
+    const last = b[b.length - 1], lx = X(mid(last)); lbl(svg, lx > W - 140 ? lx - 4 : lx + 8, Y(last.share) - 10, name, "lab s b", lx > W - 140 ? "end" : "start"); });
+});
+
+/* ===== Michael height ===== */
+resp(document.getElementById("heightc"), (W, nar) => {
+  const rows = R.height_rank, rowH = 19, m = { l: nar ? 112 : 140, r: 44, t: 6, b: 30 }, H = rows.length * rowH + m.t + m.b;
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Share of each dedication's churches on local high ground" }, document.getElementById("heightc"));
+  const max = .12, X = v => m.l + v / max * (W - m.l - m.r);
+  [0, .03, .06, .09, .12].forEach(t => { el("line", { x1: X(t), x2: X(t), y1: m.t, y2: H - m.b, stroke: "var(--rule)" }, svg); lbl(svg, X(t), H - m.b + 16, pc(t), "lab m s", "middle"); });
+  const o = R.michael.share_top_other; el("line", { x1: X(o), x2: X(o), y1: m.t, y2: H - m.b, stroke: "var(--fg)", "stroke-dasharray": "4 3" }, svg);
+  rows.forEach((r, i) => { const y = m.t + i * rowH + rowH / 2, mi = r.key === "Michael";
+    lbl(svg, m.l - 8, y + 4, r.key, mi ? "lab b" : "lab s", "end");
+    el("line", { x1: m.l, x2: X(r.share_top), y1: y, y2: y, stroke: mi ? "var(--gold)" : "var(--rule)", "stroke-width": mi ? 3 : 1.5 }, svg);
+    const c = el("circle", { cx: X(r.share_top), cy: y, r: mi ? 6 : 4, fill: mi ? "var(--gold)" : "var(--lapis)", stroke: "var(--bg)", "stroke-width": 1 }, svg);
+    hover(c, `<b>${r.key}</b><br>${pc(r.share_top, 1)} of ${fmt(r.n)} churches on local high ground<br>Median height ${fmt(r.median_elev)} m`); });
+  lbl(svg, X(o) + 4, H - m.b - 4, "all other churches", "lab m s");
+});
+
+/* ===== variety ===== */
+resp(document.getElementById("richc"), (W, nar) => {
+  const rows = [...R.richest, null, ...R.poorest], rowH = nar ? 34 : 22, m = { l: nar ? 0 : 250, r: 34, t: 4, b: 28 }, H = rows.length * rowH + m.t + m.b;
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Most and least varied regions" }, document.getElementById("richc"));
+  const max = 70, X = v => m.l + v / max * (W - m.l - m.r);
+  [0, 20, 40, 60].forEach(t => { el("line", { x1: X(t), x2: X(t), y1: m.t, y2: H - m.b, stroke: "var(--rule)" }, svg); lbl(svg, X(t), H - m.b + 16, t, "lab m s", "middle"); });
+  rows.forEach((r, i) => { const y = m.t + i * rowH; if (!r) { lbl(svg, nar ? 0 : m.l - 8, y + 15, "...", "lab m", nar ? "start" : "end"); return; }
+    const nm = r.name.replace("Région de Bruxelles-Capitale/ Brussels Hoofdstedelijk Gewest", "Brussels").replace("Provence-Alpes-Côte d’Azur", "Provence-Alpes-Côte d'Azur");
+    const by = nar ? y + 17 : y + 4, bh = nar ? 11 : rowH - 8;
+    lbl(svg, nar ? 0 : m.l - 8, nar ? y + 12 : y + 15, nar ? nm + ", " + CN[r.cc] : (nm.length > 32 ? nm.slice(0, 31) + "." : nm) + ", " + r.cc, "lab s", nar ? "start" : "end");
+    const b = el("rect", { x: m.l, y: by, width: X(r.richness100) - m.l, height: bh, fill: i < 10 ? "var(--green)" : "var(--red)", opacity: .85 }, svg);
+    hover(b, `<b>${esc(nm)}</b><br>${r.richness100.toFixed(1)} different dedications per 100 churches<br>Mary: ${pc(r.share_mary)} · ${fmt(r.n_identified)} churches`);
+    lbl(svg, X(r.richness100) + 5, by + bh - 1, r.richness100.toFixed(0), "lab b s"); });
+});
+
+/* ===== wells ===== */
+resp(document.getElementById("wellc"), (W, nar) => {
+  const rows = R.wells.ie_top.slice(0, 8), rowH = 34, m = { l: nar ? 80 : 100, r: 50, t: 4, b: 30 }, H = rows.length * rowH + m.t + m.b;
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Ireland: dedications of holy wells and churches" }, document.getElementById("wellc"));
+  const max = .25, X = v => m.l + v / max * (W - m.l - m.r);
+  [0, .05, .1, .15, .2, .25].forEach(t => { el("line", { x1: X(t), x2: X(t), y1: m.t, y2: H - m.b, stroke: "var(--rule)" }, svg); lbl(svg, X(t), H - m.b + 16, pc(t), "lab m s", "middle"); });
+  rows.forEach((r, i) => { const y = m.t + i * rowH; lbl(svg, m.l - 8, y + 20, r.key, "lab", "end");
+    const a = el("rect", { x: m.l, y: y + 5, width: X(r.share) - m.l, height: 11, fill: "var(--gold)" }, svg);
+    const b = el("rect", { x: m.l, y: y + 18, width: Math.max(1, X(r.church_share) - m.l), height: 11, fill: "var(--fg)", opacity: .75 }, svg);
+    hover(a, `<b>${r.key}: holy wells</b><br>${r.n} wells, ${pc(r.share, 1)} of named wells`); hover(b, `<b>${r.key}: churches</b><br>${pc(r.church_share, 1)} of identified churches`);
+    lbl(svg, X(r.share) + 5, y + 15, pc(r.share), "lab b s"); lbl(svg, X(r.church_share) + 5, y + 28, pc(r.church_share), "lab m s"); });
+});
+
+/* ===== country table ===== */
+(() => { const t = document.getElementById("ctab");
+  t.innerHTML = `<thead><tr><th>Country</th><th class="num">Churches</th><th class="num">Per 1,000 km²</th><th class="num">Identified</th><th class="num">From P825</th><th class="num">Mary</th><th>Leading saint</th></tr></thead><tbody>` +
+    R.countries.map(c => `<tr><td>${c.name}</td><td class="num">${fmt(c.n)}</td><td class="num">${fmt(c.per_1000km2)}</td><td class="num">${pc(c.share_identified)}</td><td class="num">${pc(c.share_p825)}</td><td class="num">${pc(c.share_mary)}</td><td>${esc(c.lead_saint)} ${pc(c.lead_saint_share, 1)}, ${esc(c.second_saint)} ${pc(c.second_saint_share, 1)}</td></tr>`).join("") + "</tbody>";
+})();
+
+/* ===== validation ===== */
+resp(document.getElementById("valc"), (W, nar) => {
+  const v = R.validation.rules_plus_heldout_aliases, rows = R.countries.map(c => ({ cc: c.cc, name: c.name, ...v[c.cc] })).filter(r => r.both).sort((a, b) => b.share - a.share);
+  const rowH = 24, m = { l: nar ? 100 : 130, r: 90, t: 4, b: 30 }, H = rows.length * rowH + m.t + m.b;
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Agreement between name reading and Wikidata dedications by country" }, document.getElementById("valc"));
+  const lo = .7, X = s => m.l + (s - lo) / (1 - lo) * (W - m.l - m.r);
+  [.7, .8, .9, 1].forEach(t => { el("line", { x1: X(t), x2: X(t), y1: m.t, y2: H - m.b, stroke: "var(--rule)" }, svg); lbl(svg, X(t), H - m.b + 16, pc(t), "lab m s", "middle"); });
+  rows.forEach((r, i) => { const y = m.t + i * rowH; lbl(svg, m.l - 8, y + 16, r.name, "lab s", "end");
+    const b = el("rect", { x: m.l, y: y + 5, width: X(r.share) - m.l, height: rowH - 10, fill: "var(--lapis)", opacity: .85 }, svg);
+    hover(b, `<b>${r.name}</b><br>${pc(r.share, 1)} agree, of ${fmt(r.both)} churches with both`);
+    lbl(svg, X(r.share) + 5, y + 16, `${pc(r.share, 1)} (n ${fmt(r.both)})`, "lab s"); });
+});
+</script>
+</body>
+</html>
